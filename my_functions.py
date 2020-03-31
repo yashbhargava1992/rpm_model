@@ -100,6 +100,6 @@ def newton_solver (r0,*pars):
 	#print r0,pars
 	func = pars[0]
 	root_func = lambda r0,*par: par[0]-func(r0,*par[1:])
-	r = opt.newton(root_func,r0, args=pars[1:],tol=1e-5)
+	r = opt.newton(root_func,r0, args=pars[1:],tol=1e-7)
 	return r
 
