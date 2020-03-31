@@ -37,24 +37,48 @@ spin_guess = np.linspace(0.,0.998,100) 		#For now only positive spins are consid
 ##### Make a plot of all the freqs for a migven mass and spin to see which freq could correspond to which eq.
 
 r_guess = 10
+sig = 1-1e-4
 
-for mass in mass_guess:
-	for spin in spin_guess:
-		try:
-			r_orb = mf.newton_solver(r_guess,mf.nu_phi,nu2[0],mass,spin)
-		except RuntimeError:
-			#print "Runtime error"
-			r_orb = np.nan
-			#continue
-		try:
-			r_per = mf.newton_solver(r_guess,mf.nu_per,nu1[0],mass,spin)
-		except RuntimeError:
-			r_per = np.nan
+for i in range(len(nu0)):
 
-		try:
-			r_nod = mf.newton_solver(r_guess,mf.nu_nod,nu0[0],mass,spin)
-		except RuntimeError:
-			r_nod = np.nan
+	r_orb_arr = np.zeros((len(mass_guess),len(spin_guess)))
+	r_per_arr = np.zeros((len(mass_guess),len(spin_guess)))
+	r_nod_arr = np.zeros((len(mass_guess),len(spin_guess)))
+#print np.shape(r_orb_arr)
+
+	for m,mass in enumerate(mass_guess):
+		for s,spin in enumerate(spin_guess):
+			try:
+				r_orb_arr[m,s] = mf.newton_solver(r_guess,mf.nu_phi,nu3[i],mass,spin)
+			except RuntimeError:
+				#print "Runtime error"
+				r_orb_arr[m,s] = np.nan
+				#continue
+			try:
+				r_per_arr[m,s] = mf.newton_solver(r_guess,mf.nu_per,nu2[i],mass,spin)
+			except RuntimeError:
+				r_per_arr[m,s] = np.nan
+
+			try:
+				r_nod_arr[m,s] = mf.newton_solver(r_guess,mf.nu_nod,nu0[i],mass,spin)
+			except RuntimeError:
+				r_nod_arr[m,s] = np.nan
 
 		#print mass,spin,r_guess,r_orb,r_per,r_nod
-		if not(np.isnan(r_nod)) : print r_guess,r_orb,r_per,r_nod
+	#	if not(np.isnan(r_nod)) : print r_guess,r_orb,r_per,r_nod
+
+	ratio_rad_orb_nod = r_orb_arr/r_nod_arr
+	ratio_rad_per_nod = r_per_arr/r_nod_arr
+
+	ind_orb_nod = np.where((ratio_rad_orb_nod< 1.0/sig) & (ratio_rad_orb_nod>sig))
+	ind_per_nod = np.where((ratio_rad_per_nod< 1.0/sig) & (ratio_rad_per_nod>sig))
+
+	#print np.shape(ind_orb_nod), ind_orb_nod[0], np.shape(ind_per_nod), ind_per_nod
+	#print mass_guess[ind_orb_nod[0]],spin_guess[ind_orb_nod[1]]
+	#print mass_guess[ind_per_nod[0]],spin_guess[ind_per_nod[1]]
+
+	plt.plot( mass_guess[ind_orb_nod[0]],spin_guess[ind_orb_nod[1]],'oC0')
+	plt.plot( mass_guess[ind_per_nod[0]],spin_guess[ind_per_nod[1]],'dC1')
+plt.xlabel("Mass")
+plt.ylabel("Spin")
+plt.show()
