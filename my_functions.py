@@ -2,7 +2,10 @@ import numpy as np
 import scipy as sc
 import scipy.optimize as opt
 
-pi = np.pi
+pi 	= np.pi
+G 	= 6.67e-11		# in SI units
+M_sun	= 1.989e30		# In SI units
+c	= 2.99e8		# In SI units
 
 def nu_phi (r,*pars):
 	"""
@@ -25,9 +28,12 @@ def nu_phi (r,*pars):
 	#M = float(M)
 	#a = float(a)
 	#r = float(r)
-	if a>=0	:orb_freq = (1/(2*pi))*(M/r**3)**0.5 * (1/(1+a*(M/r)**1.5))
-	else 	:orb_freq =-(1/(2*pi))*(M/r**3)**0.5 * (1/(1+a*(M/r)**1.5))
-
+	#if a>=0	:orb_freq = (1/(2*pi))*(M/r**3)**0.5 * (1/(1+a*(M/r)**1.5))
+	#else 	:orb_freq =-(1/(2*pi))*(M/r**3)**0.5 * (1/(1+a*(M/r)**1.5))
+	
+	if a>=0	: orb_freq= (1/(2*pi))* (c**6 /((G*M_sun*M)**2*r**3))**0.5 * 1/(1+a*(1/r)**1.5)
+	else	: orb_freq=-(1/(2*pi))* (c**6 /((G*M_sun*M)**2*r**3))**0.5 * 1/(1+a*(1/r)**1.5)
+	
 	return orb_freq
 
 def nu_per (r,*pars):
@@ -48,7 +54,8 @@ def nu_per (r,*pars):
 	"""
 	M,a = pars
 	orb_freq = nu_phi(r,M,a)
-	per_freq = orb_freq*(1-(1- 6*(M/r) - 3*a**2*(M/r)**2 + 8*a*(M/r)**1.5)**0.5)
+	#per_freq = orb_freq*(1-(1- 6*(M/r) - 3*a**2*(M/r)**2 + 8*a*(M/r)**1.5)**0.5)
+	per_freq = orb_freq*(1-(1- 6*(1/r) - 3*a**2*(1/r)**2 + 8*a*(1/r)**1.5)**0.5)
 	return per_freq
 
 def nu_nod (r,*pars):
@@ -69,7 +76,8 @@ def nu_nod (r,*pars):
 	"""
 	M,a = pars
 	orb_freq = nu_phi(r,M,a)
-	nod_freq = orb_freq* (1 - (1+3*a**2*(M/r)**2-4*a*(M/r)**1.5)**0.5)
+	#nod_freq = orb_freq* (1 - (1+3*a**2*(M/r)**2-4*a*(M/r)**1.5)**0.5)
+	nod_freq = orb_freq* (1 - (1+3*a**2*(1/r)**2-4*a*(1/r)**1.5)**0.5)
 	return nod_freq
 
 
@@ -92,6 +100,6 @@ def newton_solver (r0,*pars):
 	#print r0,pars
 	func = pars[0]
 	root_func = lambda r0,*par: par[0]-func(r0,*par[1:])
-	r = opt.newton(root_func,r0, args=pars[1:])
+	r = opt.newton(root_func,r0, args=pars[1:],tol=1e-5)
 	return r
 
