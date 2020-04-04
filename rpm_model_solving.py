@@ -3,15 +3,15 @@ import matplotlib.pyplot as plt
 import my_functions as mf
 
 
-freqs = np.loadtxt("../freqs.txt",skiprows=1,unpack=True)
+freqs = np.loadtxt("../pha_from_pds/freqs_l3_sel_20200404.txt",unpack=True)
 
 #print freqs[3]
 
-for i in range(np.shape(freqs)[0]):
-	plt.plot(freqs[2],freqs[i],'.')
+for i in range(np.shape(freqs)[0]/2):
+	plt.plot(freqs[0],freqs[i*2],'.')
 plt.xscale('log')
 plt.yscale('log')
-#plt.show()
+plt.show()
 plt.clf()
 
 
@@ -26,8 +26,8 @@ nu3 = freqs[3]
 
 ### Use these ranges once the code is finalised
 
-mass_guess = np.linspace(3.0,20.0,200)		# In solar masses
-spin_guess = np.linspace(0.,0.998,100) 		#For now only positive spins are considered. The dimensionless spin paramter J/Mc2
+mass_guess = np.linspace(7.0,10.0,100)		# In solar masses
+spin_guess = np.linspace(0.0,0.998,500) 		#For now only positive spins are considered. The dimensionless spin paramter J/Mc2
 
 #mass = 7
 #spin = 0.5 
@@ -37,8 +37,9 @@ spin_guess = np.linspace(0.,0.998,100) 		#For now only positive spins are consid
 ##### Make a plot of all the freqs for a migven mass and spin to see which freq could correspond to which eq.
 
 r_guess = 10
-sig = 1-1e-4
+sig = 1-1e-2
 
+# use different guesses to get i
 for i in range(len(nu0)):
 
 	r_orb_arr = np.zeros((len(mass_guess),len(spin_guess)))
@@ -69,16 +70,30 @@ for i in range(len(nu0)):
 
 	ratio_rad_orb_nod = r_orb_arr/r_nod_arr
 	ratio_rad_per_nod = r_per_arr/r_nod_arr
-
+	
 	ind_orb_nod = np.where((ratio_rad_orb_nod< 1.0/sig) & (ratio_rad_orb_nod>sig))
 	ind_per_nod = np.where((ratio_rad_per_nod< 1.0/sig) & (ratio_rad_per_nod>sig))
+	ind_all	    = np.where((ratio_rad_per_nod< 1.0/sig) & (ratio_rad_per_nod>sig) & (ratio_rad_orb_nod< 1.0/sig) & (ratio_rad_orb_nod>sig) )
 
 	#print np.shape(ind_orb_nod), ind_orb_nod[0], np.shape(ind_per_nod), ind_per_nod
 	#print mass_guess[ind_orb_nod[0]],spin_guess[ind_orb_nod[1]]
 	#print mass_guess[ind_per_nod[0]],spin_guess[ind_per_nod[1]]
 
-	plt.plot( mass_guess[ind_orb_nod[0]],spin_guess[ind_orb_nod[1]],'oC0')
-	plt.plot( mass_guess[ind_per_nod[0]],spin_guess[ind_per_nod[1]],'dC1')
-plt.xlabel("Mass")
-plt.ylabel("Spin")
+	#plt.plot( mass_guess[ind_orb_nod[0]],spin_guess[ind_orb_nod[1]],'oC0')
+	
+	#plt.plot( mass_guess[ind_per_nod[0]],spin_guess[ind_per_nod[1]],'dC1')
+	print i, np.shape(ind_all),
+	if np.shape(ind_all)[1] == 0:
+		print "Too tight constraint. No fit found. "
+	else :
+		print np.shape(ind_all)[1], "pairs of mass and spin satisfy, plotting position of the first of them"
+		plt.plot(mass_guess[ind_all[0]][0],spin_guess[ind_all[1]][0],'.')
+		plt.annotate(i,(mass_guess[ind_all[0]][0],spin_guess[ind_all[1]][0]))
+	plt.plot( mass_guess[ind_all[0]],spin_guess[ind_all[1]], '.')
+	plt.xlabel("Mass")
+	plt.ylabel("Spin")
+	#plt.show()
+	#plt.clf()
+plt.xscale('log')
+plt.yscale('log')
 plt.show()
