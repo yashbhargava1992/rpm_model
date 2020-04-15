@@ -31,8 +31,8 @@ def nu_phi (r,*pars):
 	#if a>=0	:orb_freq = (1/(2*pi))*(M/r**3)**0.5 * (1/(1+a*(M/r)**1.5))
 	#else 	:orb_freq =-(1/(2*pi))*(M/r**3)**0.5 * (1/(1+a*(M/r)**1.5))
 	
-	if a>=0	: orb_freq= (1/(2*pi))* (c**6 /((G*M_sun*M)**2*r**3))**0.5 * 1/(1+a*(1/r)**1.5)
-	else	: orb_freq=-(1/(2*pi))* (c**6 /((G*M_sun*M)**2*r**3))**0.5 * 1/(1+a*(1/r)**1.5)
+	if a>=0	: orb_freq= (1/(2*pi))* (c**6 /((G*M_sun*M)**2*r**3))**0.5 * 1/(1+a*(1.0/r)**1.5)
+	else	: orb_freq=-(1/(2*pi))* (c**6 /((G*M_sun*M)**2*r**3))**0.5 * 1/(1+a*(1.0/r)**1.5)
 	
 	return orb_freq
 
@@ -55,7 +55,7 @@ def nu_per (r,*pars):
 	M,a = pars
 	orb_freq = nu_phi(r,M,a)
 	#per_freq = orb_freq*(1-(1- 6*(M/r) - 3*a**2*(M/r)**2 + 8*a*(M/r)**1.5)**0.5)
-	per_freq = orb_freq*(1-(1- 6*(1/r) - 3*a**2*(1/r)**2 + 8*a*(1/r)**1.5)**0.5)
+	per_freq = orb_freq*(1-(1- 6*(1.0/r) - 3*a**2*(1.0/r)**2 + 8*a*(1.0/r)**1.5)**0.5)
 	return per_freq
 
 def nu_nod (r,*pars):
@@ -77,7 +77,7 @@ def nu_nod (r,*pars):
 	M,a = pars
 	orb_freq = nu_phi(r,M,a)
 	#nod_freq = orb_freq* (1 - (1+3*a**2*(M/r)**2-4*a*(M/r)**1.5)**0.5)
-	nod_freq = orb_freq* (1 - (1+3*a**2*(1/r)**2-4*a*(1/r)**1.5)**0.5)
+	nod_freq = orb_freq* (1 - (1+3*a**2*(1.0/r)**2-4*a*(1.0/r)**1.5)**0.5)
 	return nod_freq
 
 
