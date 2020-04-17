@@ -6,7 +6,7 @@ from joblib import Parallel, delayed
 import multiprocessing as mpg
 
 import itertools as it
-
+import os
 import time
 freqs = np.loadtxt("../pha_from_pds/freqs_l3_sel_20200410.txt",unpack=True)
 pds_avg_info = np.loadtxt("../segs_of_pds_avg.txt",unpack=True)
@@ -36,7 +36,7 @@ nu3_e	= freqs[8]
 
 ### Use these ranges once the code is finalised
 
-mass_guess = np.linspace(7.0,10.0,100)		# In solar masses
+mass_guess = np.linspace(2.0,20.0,600)		# In solar masses
 spin_guess = np.linspace(0.0,0.998,500) 		#For now only positive spins are considered. The dimensionless spin paramter J/Mc2
 
 #mass = 7
@@ -52,6 +52,9 @@ sig = 1-1e-2
 mass_spin_all = np.zeros((len(mass_guess),len(spin_guess)))
 num_cores = mpg.cpu_count()
 
+
+out_dir="mass_spin_sampling_20200417_para_v3_nu1_nod/"
+os.system("mkdir -p {}".format(out_dir))
 # use different guesses to get i
 #for i in range(1):
 for i in range(len(nu0)):
@@ -71,10 +74,11 @@ for i in range(len(nu0)):
 	
 	begin = time.time()
 
-	Parallel(n_jobs=num_cores/2)(delayed(mf.radius_compute_and_compare)(nu0_doub,nu2_doub,nu3_doub,r_orb_arr,r_per_arr,r_nod_arr,flag_sel,mass_guess,spin_guess,ms) for ms in it.product(range(len(mass_guess)),range(len(spin_guess))) )
+	flag_sel = Parallel(n_jobs=num_cores/2)(delayed(mf.radius_compute_and_compare)(nu1_doub,nu2_doub,nu3_doub,mass_guess,spin_guess,ms) for ms in it.product(range(len(mass_guess)),range(len(spin_guess))) )
 	#r_orb_arr,r_per_arr,r_nod_arr,flag_sel = Parallel(n_jobs=num_cores/2)(delayed(mf.radius_compute_and_compare)(nu0_doub,nu2_doub,nu3_doub,r_orb_arr,r_per_arr,r_nod_arr,flag_sel,mass_guess,spin_guess,ms) for ms in it.product(range(len(mass_guess)),range(len(spin_guess))) )
 	
 	print time.time()-begin, "s passed for an observation"
+	flag_sel = np.reshape(flag_sel,(len(mass_guess),len(spin_guess)))
 	print i, np.shape(flag_sel), np.sum(flag_sel)
 	plot_flag = np.sum(flag_sel)>0
 	print plot_flag
@@ -107,7 +111,7 @@ for i in range(len(nu0)):
 	mass_spin_test[flag_sel] = 1  
 	mass_spin_all += mass_spin_test			# Storing all mass, spin pairs recorded in this iteration
 	#mass_spin_test[~flag_sel] = np.nan
-	np.savetxt("mass_spin_sampling_20200415_nu1_nod/{:02}_mass_spin_flag.dat".format(i),mass_spin_test)
+	np.savetxt(out_dir+"{:02}_mass_spin_flag.dat".format(i),mass_spin_test)
 #	hist_2d = np.histogram2d(,mass_guess,bins=10,weights=mass_spin_test)
 #	print hist_2d
 	#plt.plot(mass_spin_meshgrid[0][flag_sel],mass_spin_meshgrid[1][flag_sel],'.',alpha=0.2)
@@ -123,17 +127,17 @@ for i in range(len(nu0)):
 		plt.title("{0}: {1}".format(int(segs[i]),int(number_pds)))
 		plt.ylim(0,0.998)
 		plt.xlim(np.min(mass_guess),np.max(mass_guess))
-		plt.savefig("{}.png".format(i))
+		plt.savefig(out_dir+"{}.png".format(i))
 		#plt.show()
 
 	plt.clf()
 
-plt.imshow(mass_spin_all.T, origin='low',extent=[np.min(mass_guess),np.max(mass_guess),np.min(spin_guess),np.max(spin_guess)])
+plt.imshow(mass_spin_all.T, origin='low',extent=[np.min(mass_guess),np.max(mass_guess),np.min(spin_guess),np.max(spin_guess)],aspect='auto')
 plt.colorbar()
 plt.xlabel("Mass")
 plt.ylabel("Spin")
 #plt.xscale('log')
 #plt.yscale('log')
-#plt.savefig("mass_spin_distribution_all_pds_20200414.pdf")
+plt.savefig(out_dir+"mass_spin_distribution_all_pds_20200417.pdf")
 #plt.show()
 plt.clf()
