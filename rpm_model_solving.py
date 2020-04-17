@@ -2,7 +2,12 @@ import numpy as np
 import matplotlib.pyplot as plt
 import my_functions as mf
 
+from joblib import Parallel, delayed
+import multiprocessing as mpg
 
+import itertools as it
+
+import time
 freqs = np.loadtxt("../pha_from_pds/freqs_l3_sel_20200410.txt",unpack=True)
 pds_avg_info = np.loadtxt("../segs_of_pds_avg.txt",unpack=True)
 #print pds_avg_info
@@ -31,7 +36,7 @@ nu3_e	= freqs[8]
 
 ### Use these ranges once the code is finalised
 
-mass_guess = np.linspace(2.0,20.0,600)		# In solar masses
+mass_guess = np.linspace(7.0,10.0,100)		# In solar masses
 spin_guess = np.linspace(0.0,0.998,500) 		#For now only positive spins are considered. The dimensionless spin paramter J/Mc2
 
 #mass = 7
@@ -45,67 +50,42 @@ r_guess = 10
 sig = 1-1e-2
 
 mass_spin_all = np.zeros((len(mass_guess),len(spin_guess)))
-
+num_cores = mpg.cpu_count()
 
 # use different guesses to get i
 #for i in range(1):
 for i in range(len(nu0)):
 
-	r_orb_arr = np.zeros((len(mass_guess),len(spin_guess)))
-	r_per_arr = np.zeros((len(mass_guess),len(spin_guess)))
-	r_nod_arr = np.zeros((len(mass_guess),len(spin_guess)))
+	r_orb_arr = list(np.zeros((len(mass_guess),len(spin_guess))))
+	r_per_arr = list(np.zeros((len(mass_guess),len(spin_guess))))
+	r_nod_arr = list(np.zeros((len(mass_guess),len(spin_guess))))
 #print np.shape(r_orb_arr)
-	flag_sel = np.zeros((len(mass_guess),len(spin_guess)))
+	flag_sel = list(np.zeros((len(mass_guess),len(spin_guess))))
 	mass_spin_test = np.zeros((len(mass_guess),len(spin_guess)))
-	for m,mass in enumerate(mass_guess):
-		for s,spin in enumerate(spin_guess):
-			try:
-				r_orb_arr[m,s] = mf.newton_solver(r_guess,mf.nu_phi,nu3[i],mass,spin)
-				r_orb_max = mf.newton_solver(r_guess,mf.nu_phi,nu3[i]-nu3_e[i],mass,spin)
-				r_orb_min = mf.newton_solver(r_guess,mf.nu_phi,nu3[i]+nu3_e[i],mass,spin)
-			except RuntimeError:
-				#print "Runtime error"
-				r_orb_arr[m,s] = np.nan
-				#continue
-				r_orb_max = np.nan
-				r_orb_min = np.nan
-			try:
-				r_per_arr[m,s] = mf.newton_solver(r_guess,mf.nu_per,nu2[i],mass,spin)
-				r_per_max = mf.newton_solver(r_guess,mf.nu_per,nu2[i]-nu2_e[i],mass,spin)
-				r_per_min = mf.newton_solver(r_guess,mf.nu_per,nu2[i]+nu2_e[i],mass,spin)
-			except RuntimeError:
-				r_per_arr[m,s] = np.nan
-				r_per_max = np.nan
-				r_per_min = np.nan
-
-			try:
-				r_nod_arr[m,s] = mf.newton_solver(r_guess,mf.nu_nod,nu1[i],mass,spin)
-				r_nod_max = mf.newton_solver(r_guess,mf.nu_nod,nu1[i]-nu1_e[i],mass,spin)
-				r_nod_min = mf.newton_solver(r_guess,mf.nu_nod,nu1[i]+nu1_e[i],mass,spin)
-			except RuntimeError:
-				r_nod_arr[m,s] = np.nan
-				r_nod_max = np.nan
-				r_nod_min = np.nan
-			# Computing the range of the radius. Since frequency is decreasing monotonic func of radius, a low freq will give higher radius. 
-			
-		# if the largest of the mins is greater than the smallest of the maxs then there is no common interval. So that mass spin pair is not chosen. 
-			if np.max([r_orb_min,r_per_min,r_nod_min]) <= np.min([r_orb_max,r_per_max,r_nod_max]): 
-				flag_sel[m,s] = 1
-
-			
-
 		#print mass,spin,r_guess,r_orb,r_per,r_nod
 	#	if not(np.isnan(r_nod)) : print r_guess,r_orb,r_per,r_nod
+	nu0_doub = [nu0[i],nu0_e[i]]
+	nu1_doub = [nu1[i],nu1_e[i]]
+	nu2_doub = [nu2[i],nu2_e[i]]
+	nu3_doub = [nu3[i],nu3_e[i]]
+	
+	begin = time.time()
+
+	Parallel(n_jobs=num_cores/2)(delayed(mf.radius_compute_and_compare)(nu0_doub,nu2_doub,nu3_doub,r_orb_arr,r_per_arr,r_nod_arr,flag_sel,mass_guess,spin_guess,ms) for ms in it.product(range(len(mass_guess)),range(len(spin_guess))) )
+	#r_orb_arr,r_per_arr,r_nod_arr,flag_sel = Parallel(n_jobs=num_cores/2)(delayed(mf.radius_compute_and_compare)(nu0_doub,nu2_doub,nu3_doub,r_orb_arr,r_per_arr,r_nod_arr,flag_sel,mass_guess,spin_guess,ms) for ms in it.product(range(len(mass_guess)),range(len(spin_guess))) )
+	
+	print time.time()-begin, "s passed for an observation"
 	print i, np.shape(flag_sel), np.sum(flag_sel)
 	plot_flag = np.sum(flag_sel)>0
 	print plot_flag
+	flag_sel = np.array(flag_sel)
 	flag_sel = flag_sel.astype(bool)
-	ratio_rad_orb_nod = r_orb_arr/r_nod_arr
-	ratio_rad_per_nod = r_per_arr/r_nod_arr
+	#ratio_rad_orb_nod = r_orb_arr/r_nod_arr
+	#ratio_rad_per_nod = r_per_arr/r_nod_arr
 	
-	ind_orb_nod = np.where((ratio_rad_orb_nod< 1.0/sig) & (ratio_rad_orb_nod>sig))
-	ind_per_nod = np.where((ratio_rad_per_nod< 1.0/sig) & (ratio_rad_per_nod>sig))
-	ind_all	    = np.where((ratio_rad_per_nod< 1.0/sig) & (ratio_rad_per_nod>sig) & (ratio_rad_orb_nod< 1.0/sig) & (ratio_rad_orb_nod>sig) )
+	#ind_orb_nod = np.where((ratio_rad_orb_nod< 1.0/sig) & (ratio_rad_orb_nod>sig))
+	#ind_per_nod = np.where((ratio_rad_per_nod< 1.0/sig) & (ratio_rad_per_nod>sig))
+	#ind_all	    = np.where((ratio_rad_per_nod< 1.0/sig) & (ratio_rad_per_nod>sig) & (ratio_rad_orb_nod< 1.0/sig) & (ratio_rad_orb_nod>sig) )
 
 	#print np.shape(ind_orb_nod), ind_orb_nod[0], np.shape(ind_per_nod), ind_per_nod
 	#print mass_guess[ind_orb_nod[0]],spin_guess[ind_orb_nod[1]]
@@ -143,7 +123,7 @@ for i in range(len(nu0)):
 		plt.title("{0}: {1}".format(int(segs[i]),int(number_pds)))
 		plt.ylim(0,0.998)
 		plt.xlim(np.min(mass_guess),np.max(mass_guess))
-#		plt.savefig("{}.png".format(i))
+		plt.savefig("{}.png".format(i))
 		#plt.show()
 
 	plt.clf()
