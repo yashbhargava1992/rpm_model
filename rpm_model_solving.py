@@ -1,7 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import my_functions as mf
-
+import time
 
 freqs = np.loadtxt("../pha_from_pds/freqs_l3_sel_20200410.txt",unpack=True)
 pds_avg_info = np.loadtxt("../segs_of_pds_avg.txt",unpack=True)
@@ -46,6 +46,7 @@ sig = 1-1e-2
 
 mass_spin_all = np.zeros((len(mass_guess),len(spin_guess)))
 
+out_dir = "mass_spin_sampling_20200415_nu1_nod/"
 
 # use different guesses to get i
 #for i in range(1):
@@ -57,6 +58,7 @@ for i in range(len(nu0)):
 #print np.shape(r_orb_arr)
 	flag_sel = np.zeros((len(mass_guess),len(spin_guess)))
 	mass_spin_test = np.zeros((len(mass_guess),len(spin_guess)))
+	begin = time.time()
 	for m,mass in enumerate(mass_guess):
 		for s,spin in enumerate(spin_guess):
 			try:
@@ -95,17 +97,18 @@ for i in range(len(nu0)):
 			
 
 		#print mass,spin,r_guess,r_orb,r_per,r_nod
-	#	if not(np.isnan(r_nod)) : print r_guess,r_orb,r_per,r_nod
-	print i, np.shape(flag_sel), np.sum(flag_sel)
+	#	if not(np.isnan(r_nod)) : print r_guess,r_orb,r_per,r_nod 
+	print i, time.time()-begin, "s passed", np.shape(flag_sel), np.sum(flag_sel)
 	plot_flag = np.sum(flag_sel)>0
-	print plot_flag
-	flag_sel = flag_sel.astype(bool)
-	ratio_rad_orb_nod = r_orb_arr/r_nod_arr
-	ratio_rad_per_nod = r_per_arr/r_nod_arr
+	#print plot_flag
 	
-	ind_orb_nod = np.where((ratio_rad_orb_nod< 1.0/sig) & (ratio_rad_orb_nod>sig))
-	ind_per_nod = np.where((ratio_rad_per_nod< 1.0/sig) & (ratio_rad_per_nod>sig))
-	ind_all	    = np.where((ratio_rad_per_nod< 1.0/sig) & (ratio_rad_per_nod>sig) & (ratio_rad_orb_nod< 1.0/sig) & (ratio_rad_orb_nod>sig) )
+	flag_sel = flag_sel.astype(bool)
+	#ratio_rad_orb_nod = r_orb_arr/r_nod_arr
+	#ratio_rad_per_nod = r_per_arr/r_nod_arr
+	
+	#ind_orb_nod = np.where((ratio_rad_orb_nod< 1.0/sig) & (ratio_rad_orb_nod>sig))
+	#ind_per_nod = np.where((ratio_rad_per_nod< 1.0/sig) & (ratio_rad_per_nod>sig))
+	#ind_all	    = np.where((ratio_rad_per_nod< 1.0/sig) & (ratio_rad_per_nod>sig) & (ratio_rad_orb_nod< 1.0/sig) & (ratio_rad_orb_nod>sig) )
 
 	#print np.shape(ind_orb_nod), ind_orb_nod[0], np.shape(ind_per_nod), ind_per_nod
 	#print mass_guess[ind_orb_nod[0]],spin_guess[ind_orb_nod[1]]
@@ -127,7 +130,7 @@ for i in range(len(nu0)):
 	mass_spin_test[flag_sel] = 1  
 	mass_spin_all += mass_spin_test			# Storing all mass, spin pairs recorded in this iteration
 	#mass_spin_test[~flag_sel] = np.nan
-	np.savetxt("mass_spin_sampling_20200415_nu1_nod/{:02}_mass_spin_flag.dat".format(i),mass_spin_test)
+	np.savetxt(out_dir+"{:02}_mass_spin_flag.dat".format(i),mass_spin_test)
 #	hist_2d = np.histogram2d(,mass_guess,bins=10,weights=mass_spin_test)
 #	print hist_2d
 	#plt.plot(mass_spin_meshgrid[0][flag_sel],mass_spin_meshgrid[1][flag_sel],'.',alpha=0.2)
@@ -143,7 +146,7 @@ for i in range(len(nu0)):
 		plt.title("{0}: {1}".format(int(segs[i]),int(number_pds)))
 		plt.ylim(0,0.998)
 		plt.xlim(np.min(mass_guess),np.max(mass_guess))
-#		plt.savefig("{}.png".format(i))
+		plt.savefig(out_dir+"{}.png".format(i))
 		#plt.show()
 
 	plt.clf()
