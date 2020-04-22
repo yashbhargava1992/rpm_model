@@ -159,5 +159,5 @@ def radius_compute_and_compare(nu1,nu2,nu3,mass_array,spin_array,ms_index,r_gues
 		flag_sel = 1
 	else: flag_sel = 0
 
-	return flag_sel
-#	return r_orb_arr,r_per_arr,r_nod_arr,flag_sel
+#	return flag_sel
+	return r_orb_arr,r_per_arr,r_nod_arr,flag_sel
