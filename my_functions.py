@@ -103,3 +103,61 @@ def newton_solver (r0,*pars):
 	r = opt.newton(root_func,r0, args=pars[1:],tol=1e-7)
 	return r
 
+
+def radius_compute_and_compare(nu1,nu2,nu3,mass_array,spin_array,ms_index,r_guess=10):
+	"""
+
+	This will accept single triplet of nu1<nu2<nu3 and use the RPM model to get a radius estimates. This function is to be called in parallel to do this for multiple mass and spin estimates. 
+
+	INPUT
+	nu1		: Triplet in the form par,min_err,plus_err
+	nu2		: Triplet in the form par,min_err,plus_err
+	nu3		: Triplet in the form par,min_err,plus_err
+	mass_array	: Array of mass points from which mass will be sourced
+	spin_array	: Array of spin points from which spin will be sourced	
+	ms_index	: Index tuple of mass and spin
+
+	OUTPUT
+	r_orb
+	r_per
+	r_nod
+	flag_sel
+	"""
+	m,s = ms_index
+	mass = mass_array[m]
+	spin = spin_array[s]
+	try:
+		r_orb_arr = newton_solver(r_guess,nu_phi,nu3[0],mass,spin)
+		r_orb_max = newton_solver(r_guess,nu_phi,nu3[0]-nu3[1],mass,spin)
+		r_orb_min = newton_solver(r_guess,nu_phi,nu3[0]+nu3[1],mass,spin)
+	except RuntimeError:
+		#print "Runtime error"
+		r_orb_arr = np.nan
+		#continue
+		r_orb_max = np.nan
+		r_orb_min = np.nan
+	try:
+		r_per_arr = newton_solver(r_guess,nu_per,nu2[0],mass,spin)
+		r_per_max = newton_solver(r_guess,nu_per,nu2[0]-nu2[1],mass,spin)
+		r_per_min = newton_solver(r_guess,nu_per,nu2[0]+nu2[1],mass,spin)
+	except RuntimeError:
+		r_per_arr = np.nan
+		r_per_max = np.nan
+		r_per_min = np.nan
+	try:
+		r_nod_arr = newton_solver(r_guess,nu_nod,nu1[0],mass,spin)
+		r_nod_max = newton_solver(r_guess,nu_nod,nu1[0]-nu1[1],mass,spin)
+		r_nod_min = newton_solver(r_guess,nu_nod,nu1[0]+nu1[1],mass,spin)
+	except RuntimeError:
+		r_nod_arr = np.nan
+		r_nod_max = np.nan
+		r_nod_min = np.nan
+	# Computing the range of the radius. Since frequency is decreasing monotonic func of radius, a low freq will give higher radius. 
+			
+	# if the largest of the mins is greater than the smallest of the maxs then there is no common interval. So that mass spin pair is not chosen. 
+	if np.max([r_orb_min,r_per_min,r_nod_min]) <= np.min([r_orb_max,r_per_max,r_nod_max]): 
+		flag_sel = 1
+	else: flag_sel = 0
+
+#	return flag_sel
+	return r_orb_arr,r_per_arr,r_nod_arr,flag_sel

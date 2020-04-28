@@ -3,8 +3,20 @@ import matplotlib.pyplot as plt
 import my_functions as mf
 import time
 
-freqs = np.loadtxt("../pha_from_pds/freqs_l3_sel_20200410.txt",unpack=True)
+parallelising =True
+#parallelising =False
+
+if parallelising: 
+	from joblib import Parallel, delayed
+	import multiprocessing as mpg
+
+import itertools as it
+import os
+import time
+
+freqs = np.loadtxt("../pha_from_pds/freqs_l4_sel_20200419.txt",unpack=True)
 pds_avg_info = np.loadtxt("../segs_of_pds_avg.txt",unpack=True)
+
 #print pds_avg_info
 #print freqs[3]
 
@@ -31,8 +43,8 @@ nu3_e	= freqs[8]
 
 ### Use these ranges once the code is finalised
 
-mass_guess = np.linspace(2.0,20.0,600)		# In solar masses
-spin_guess = np.linspace(0.0,0.998,500) 		#For now only positive spins are considered. The dimensionless spin paramter J/Mc2
+mass_guess = np.linspace(2.0,20.0,60)		# In solar masses
+spin_guess = np.linspace(0.0,0.998,50) 		#For now only positive spins are considered. The dimensionless spin paramter J/Mc2
 
 #mass = 7
 #spin = 0.5 
@@ -45,86 +57,92 @@ r_guess = 10
 sig = 1-1e-2
 
 mass_spin_all = np.zeros((len(mass_guess),len(spin_guess)))
+if parallelising:num_cores = mpg.cpu_count()
 
-out_dir = "mass_spin_sampling_20200415_nu1_nod/"
+#out_dir = "mass_spin_sampling_20200415_nu1_nod/"
 
+#out_dir="mass_spin_sampling_20200422_para_v5_nu0_nod_nu2_per_nu3_orb/"
+out_dir = 'merge_test'
+os.system("mkdir -p {}".format(out_dir))
 # use different guesses to get i
 #for i in range(1):
-for i in range(len(nu0)):
+for i in range(0,len(nu0)):
 
-	r_orb_arr = np.zeros((len(mass_guess),len(spin_guess)))
-	r_per_arr = np.zeros((len(mass_guess),len(spin_guess)))
-	r_nod_arr = np.zeros((len(mass_guess),len(spin_guess)))
-#print np.shape(r_orb_arr)
-	flag_sel = np.zeros((len(mass_guess),len(spin_guess)))
 	mass_spin_test = np.zeros((len(mass_guess),len(spin_guess)))
-	begin = time.time()
-	for m,mass in enumerate(mass_guess):
-		for s,spin in enumerate(spin_guess):
-			try:
-				r_orb_arr[m,s] = mf.newton_solver(r_guess,mf.nu_phi,nu3[i],mass,spin)
-				r_orb_max = mf.newton_solver(r_guess,mf.nu_phi,nu3[i]-nu3_e[i],mass,spin)
-				r_orb_min = mf.newton_solver(r_guess,mf.nu_phi,nu3[i]+nu3_e[i],mass,spin)
-			except RuntimeError:
-				#print "Runtime error"
-				r_orb_arr[m,s] = np.nan
-				#continue
-				r_orb_max = np.nan
-				r_orb_min = np.nan
-			try:
-				r_per_arr[m,s] = mf.newton_solver(r_guess,mf.nu_per,nu2[i],mass,spin)
-				r_per_max = mf.newton_solver(r_guess,mf.nu_per,nu2[i]-nu2_e[i],mass,spin)
-				r_per_min = mf.newton_solver(r_guess,mf.nu_per,nu2[i]+nu2_e[i],mass,spin)
-			except RuntimeError:
-				r_per_arr[m,s] = np.nan
-				r_per_max = np.nan
-				r_per_min = np.nan
+#<<<<<<< HEAD
+	if not parallelising:
+		begin = time.time()
+		r_orb_arr = np.zeros((len(mass_guess),len(spin_guess)))
+		r_per_arr = np.zeros((len(mass_guess),len(spin_guess)))
+		r_nod_arr = np.zeros((len(mass_guess),len(spin_guess)))
+		flag_sel = np.zeros((len(mass_guess),len(spin_guess)))
+		for m,mass in enumerate(mass_guess):
+			for s,spin in enumerate(spin_guess):
+				try:
+					r_orb_arr[m,s] = mf.newton_solver(r_guess,mf.nu_phi,nu3[i],mass,spin)
+					r_orb_max = mf.newton_solver(r_guess,mf.nu_phi,nu3[i]-nu3_e[i],mass,spin)
+					r_orb_min = mf.newton_solver(r_guess,mf.nu_phi,nu3[i]+nu3_e[i],mass,spin)
+				except RuntimeError:
+					#print "Runtime error"
+					r_orb_arr[m,s] = np.nan
+					#continue
+					r_orb_max = np.nan
+					r_orb_min = np.nan
+				try:
+					r_per_arr[m,s] = mf.newton_solver(r_guess,mf.nu_per,nu2[i],mass,spin)
+					r_per_max = mf.newton_solver(r_guess,mf.nu_per,nu2[i]-nu2_e[i],mass,spin)
+					r_per_min = mf.newton_solver(r_guess,mf.nu_per,nu2[i]+nu2_e[i],mass,spin)
+				except RuntimeError:
+					r_per_arr[m,s] = np.nan
+					r_per_max = np.nan
+					r_per_min = np.nan
 
-			try:
-				r_nod_arr[m,s] = mf.newton_solver(r_guess,mf.nu_nod,nu1[i],mass,spin)
-				r_nod_max = mf.newton_solver(r_guess,mf.nu_nod,nu1[i]-nu1_e[i],mass,spin)
-				r_nod_min = mf.newton_solver(r_guess,mf.nu_nod,nu1[i]+nu1_e[i],mass,spin)
-			except RuntimeError:
-				r_nod_arr[m,s] = np.nan
-				r_nod_max = np.nan
-				r_nod_min = np.nan
-			# Computing the range of the radius. Since frequency is decreasing monotonic func of radius, a low freq will give higher radius. 
-			
-		# if the largest of the mins is greater than the smallest of the maxs then there is no common interval. So that mass spin pair is not chosen. 
-			if np.max([r_orb_min,r_per_min,r_nod_min]) <= np.min([r_orb_max,r_per_max,r_nod_max]): 
-				flag_sel[m,s] = 1
+				try:
+					r_nod_arr[m,s] = mf.newton_solver(r_guess,mf.nu_nod,nu1[i],mass,spin)
+					r_nod_max = mf.newton_solver(r_guess,mf.nu_nod,nu1[i]-nu1_e[i],mass,spin)
+					r_nod_min = mf.newton_solver(r_guess,mf.nu_nod,nu1[i]+nu1_e[i],mass,spin)
+				except RuntimeError:
+					r_nod_arr[m,s] = np.nan
+					r_nod_max = np.nan
+					r_nod_min = np.nan
+				# Computing the range of the radius. Since frequency is decreasing monotonic func of radius, a low freq will give higher radius. 
+				
+			# if the largest of the mins is greater than the smallest of the maxs then there is no common interval. So that mass spin pair is not chosen. 
+				if np.max([r_orb_min,r_per_min,r_nod_min]) <= np.min([r_orb_max,r_per_max,r_nod_max]): 
+					flag_sel[m,s] = 1
 
-			
+				
 
-		#print mass,spin,r_guess,r_orb,r_per,r_nod
-	#	if not(np.isnan(r_nod)) : print r_guess,r_orb,r_per,r_nod 
-	print i, time.time()-begin, "s passed", np.shape(flag_sel), np.sum(flag_sel)
-	plot_flag = np.sum(flag_sel)>0
-	#print plot_flag
+			#print mass,spin,r_guess,r_orb,r_per,r_nod
+		#	if not(np.isnan(r_nod)) : print r_guess,r_orb,r_per,r_nod 
+		print i, time.time()-begin, "s passed", np.shape(flag_sel), np.sum(flag_sel)
+		plot_flag = np.sum(flag_sel)>0
+		#print plot_flag
+		flag_sel = flag_sel.astype(bool)
+
+	else:		
+			#print mass,spin,r_guess,r_orb,r_per,r_nod
+		#	if not(np.isnan(r_nod)) : print r_guess,r_orb,r_per,r_nod
+		nu0_doub = [nu0[i],nu0_e[i]]
+		nu1_doub = [nu1[i],nu1_e[i]]
+		nu2_doub = [nu2[i],nu2_e[i]]
+		nu3_doub = [nu3[i],nu3_e[i]]
+		
+		begin = time.time()
+
+		outs = Parallel(n_jobs=4)(delayed(mf.radius_compute_and_compare)(nu0_doub,nu2_doub,nu3_doub,mass_guess,spin_guess,ms) for ms in it.product(range(len(mass_guess)),range(len(spin_guess))) )
+		outs = np.array(outs)
+		flag_sel=outs[:,-1]
+		print time.time()-begin, "s passed for an observation"
+		flag_sel = np.reshape(flag_sel,(len(mass_guess),len(spin_guess)))
+		#print i, np.shape(flag_sel), np.sum(flag_sel),
+		plot_flag = np.sum(flag_sel)>0
+		#print plot_flag
+		flag_sel = np.array(flag_sel)
+		flag_sel = flag_sel.astype(bool)
+		#ratio_rad_orb_nod = r_orb_arr/r_nod_arr
+		#ratio_rad_per_nod = r_per_arr/r_nod_arr
 	
-	flag_sel = flag_sel.astype(bool)
-	#ratio_rad_orb_nod = r_orb_arr/r_nod_arr
-	#ratio_rad_per_nod = r_per_arr/r_nod_arr
-	
-	#ind_orb_nod = np.where((ratio_rad_orb_nod< 1.0/sig) & (ratio_rad_orb_nod>sig))
-	#ind_per_nod = np.where((ratio_rad_per_nod< 1.0/sig) & (ratio_rad_per_nod>sig))
-	#ind_all	    = np.where((ratio_rad_per_nod< 1.0/sig) & (ratio_rad_per_nod>sig) & (ratio_rad_orb_nod< 1.0/sig) & (ratio_rad_orb_nod>sig) )
-
-	#print np.shape(ind_orb_nod), ind_orb_nod[0], np.shape(ind_per_nod), ind_per_nod
-	#print mass_guess[ind_orb_nod[0]],spin_guess[ind_orb_nod[1]]
-	#print mass_guess[ind_per_nod[0]],spin_guess[ind_per_nod[1]]
-
-	#plt.plot( mass_guess[ind_orb_nod[0]],spin_guess[ind_orb_nod[1]],'oC0')
-	
-	#plt.plot( mass_guess[ind_per_nod[0]],spin_guess[ind_per_nod[1]],'dC1')
-	#print i, np.shape(ind_all),
-	#if np.shape(ind_all)[1] == 0:
-	#	print "Too tight constraint. No fit found. "
-	#else :
-	#	print np.shape(ind_all)[1], "pairs of mass and spin satisfy, plotting position of the first of them"
-	#	plt.plot(mass_guess[ind_all[0]][0],spin_guess[ind_all[1]][0],'.')
-	#	plt.annotate(i,(mass_guess[ind_all[0]][0],spin_guess[ind_all[1]][0]))
-	#plt.plot( mass_guess[ind_all[0]],spin_guess[ind_all[1]], '.')
 	mass_spin_meshgrid = np.meshgrid(mass_guess,spin_guess,indexing='ij')
 	
 	mass_spin_test[flag_sel] = 1  
@@ -132,7 +150,6 @@ for i in range(len(nu0)):
 	#mass_spin_test[~flag_sel] = np.nan
 	np.savetxt(out_dir+"{:02}_mass_spin_flag.dat".format(i),mass_spin_test)
 #	hist_2d = np.histogram2d(,mass_guess,bins=10,weights=mass_spin_test)
-#	print hist_2d
 	#plt.plot(mass_spin_meshgrid[0][flag_sel],mass_spin_meshgrid[1][flag_sel],'.',alpha=0.2)
 	#plt.contourf(mass_spin_meshgrid[0][flag_sel],mass_spin_meshgrid[1][flag_sel])
 	if plot_flag: 
@@ -143,6 +160,7 @@ for i in range(len(nu0)):
 		plt.ylabel("Spin")
 		obsid = 1200120000+segs[i]
 		number_pds = pds_avg_info[1][np.where(pds_avg_info[0]==obsid)]
+		#print segs[i], number_pds
 		plt.title("{0}: {1}".format(int(segs[i]),int(number_pds)))
 		plt.ylim(0,0.998)
 		plt.xlim(np.min(mass_guess),np.max(mass_guess))
@@ -151,12 +169,12 @@ for i in range(len(nu0)):
 
 	plt.clf()
 
-plt.imshow(mass_spin_all.T, origin='low',extent=[np.min(mass_guess),np.max(mass_guess),np.min(spin_guess),np.max(spin_guess)])
+plt.imshow(mass_spin_all.T, origin='low',extent=[np.min(mass_guess),np.max(mass_guess),np.min(spin_guess),np.max(spin_guess)],aspect='auto')
 plt.colorbar()
 plt.xlabel("Mass")
 plt.ylabel("Spin")
 #plt.xscale('log')
 #plt.yscale('log')
-#plt.savefig("mass_spin_distribution_all_pds_20200414.pdf")
+plt.savefig(out_dir+"mass_spin_distribution_all_pds_20200417.pdf")
 #plt.show()
 plt.clf()
