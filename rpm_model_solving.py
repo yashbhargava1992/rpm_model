@@ -90,19 +90,25 @@ M = beta/(nu3*(r**1.5+a))
 
 plt.plot (segs,r)
 plt.plot (segs[weird_spin],r[weird_spin], 'or')
-#plt.show()
+plt.xlabel('OBSID 1200120XXX')
+plt.ylabel('Radius in R_g')
+plt.show()
 plt.clf()
 
 
 plt.plot (segs,a)
 plt.plot (segs[weird_spin],a[weird_spin], 'or')
+plt.xlabel('OBSID 1200120XXX')
+plt.ylabel('Spin parameter')
 plt.show()
 plt.clf()
 
 
 plt.plot (segs,M)
 plt.plot (segs[weird_spin],M[weird_spin], 'or')
-#plt.show()
+plt.xlabel('OBSID 1200120XXX')
+plt.ylabel('Mass in M_sun')
+plt.show()
 plt.clf()
 
 
@@ -111,6 +117,6 @@ brack = A+6.0/r
 prec = r**1.5/4
 plt.plot(segs,brack)
 plt.plot(segs,prec)
-plt.show()
-
+#plt.show()
+plt.clf()
 
