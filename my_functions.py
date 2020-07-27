@@ -161,3 +161,7 @@ def radius_compute_and_compare(nu1,nu2,nu3,mass_array,spin_array,ms_index,r_gues
 
 #	return flag_sel
 	return r_orb_arr,r_per_arr,r_nod_arr,flag_sel
+
+
+def chi_sq(y,y_mod,del_y):
+	return (y-y_mod)**2/del_y**2
