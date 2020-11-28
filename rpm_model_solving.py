@@ -3,8 +3,8 @@ import matplotlib.pyplot as plt
 import my_functions as mf
 import time
 
-parallelising =True
-#parallelising =False
+#parallelising =True
+parallelising =False
 
 if parallelising: 
 	from joblib import Parallel, delayed
@@ -14,7 +14,7 @@ import itertools as it
 import os
 import time
 
-freqs = np.loadtxt("../pha_from_pds/freqs_l4_sel_20200419.txt",unpack=True)
+freqs = np.loadtxt("../pha_from_pds/freqs_l3_sel_20200513_onlycorr.txt",unpack=True)
 pds_avg_info = np.loadtxt("../segs_of_pds_avg.txt",unpack=True)
 
 #print pds_avg_info
@@ -44,11 +44,11 @@ nu3_e	= freqs[8]
 ### Use these ranges once the code is finalised
 
 mass_guess = np.linspace(2.0,20.0,60)		# In solar masses
-spin_guess = np.linspace(0.0,0.998,50) 		#For now only positive spins are considered. The dimensionless spin paramter J/Mc2
+spin_guess = np.linspace(0.4,0.998,500) 		#For now only positive spins are considered. The dimensionless spin paramter J/Mc2
 
-#mass = 7
+mass_fixed = 9.2
 #spin = 0.5 
-
+mass_guess = np.atleast_1d(mass_fixed)
 # The looping over the mass and spin shall be done using iterables. 
 
 ##### Make a plot of all the freqs for a given mass and spin to see which freq could correspond to which eq.
@@ -62,7 +62,7 @@ if parallelising:num_cores = mpg.cpu_count()
 #out_dir = "mass_spin_sampling_20200415_nu1_nod/"
 
 #out_dir="mass_spin_sampling_20200422_para_v5_nu0_nod_nu2_per_nu3_orb/"
-out_dir = 'merge_test'
+out_dir = 'global_fit_single_mass_9p2/'
 os.system("mkdir -p {}".format(out_dir))
 # use different guesses to get i
 #for i in range(1):
@@ -98,9 +98,9 @@ for i in range(0,len(nu0)):
 					r_per_min = np.nan
 
 				try:
-					r_nod_arr[m,s] = mf.newton_solver(r_guess,mf.nu_nod,nu1[i],mass,spin)
-					r_nod_max = mf.newton_solver(r_guess,mf.nu_nod,nu1[i]-nu1_e[i],mass,spin)
-					r_nod_min = mf.newton_solver(r_guess,mf.nu_nod,nu1[i]+nu1_e[i],mass,spin)
+					r_nod_arr[m,s] = mf.newton_solver(r_guess,mf.nu_nod,nu1[i]/2,mass,spin)
+					r_nod_max = mf.newton_solver(r_guess,mf.nu_nod,nu1[i]/2-nu1_e[i],mass,spin)
+					r_nod_min = mf.newton_solver(r_guess,mf.nu_nod,nu1[i]/2+nu1_e[i],mass,spin)
 				except RuntimeError:
 					r_nod_arr[m,s] = np.nan
 					r_nod_max = np.nan
@@ -117,7 +117,7 @@ for i in range(0,len(nu0)):
 		#	if not(np.isnan(r_nod)) : print r_guess,r_orb,r_per,r_nod 
 		print i, time.time()-begin, "s passed", np.shape(flag_sel), np.sum(flag_sel)
 		plot_flag = np.sum(flag_sel)>0
-		#print plot_flag
+		print plot_flag
 		flag_sel = flag_sel.astype(bool)
 
 	else:		
