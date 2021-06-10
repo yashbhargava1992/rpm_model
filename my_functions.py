@@ -1,6 +1,7 @@
 import numpy as np
 import scipy as sc
 import scipy.optimize as opt
+import pandas as pd
 
 pi 	= np.pi
 G 	= 6.67e-11		# in SI units
@@ -165,3 +166,86 @@ def radius_compute_and_compare(nu1,nu2,nu3,mass_array,spin_array,ms_index,r_gues
 
 def chi_sq(y,y_mod,del_y):
 	return (y-y_mod)**2/del_y**2
+
+
+def total_chisq(theta, freqs):
+	"""
+	This function will take the array of the frequencies with the errors and compute the radius and then the global chisq for a given mass and spin which are packed as theta
+	
+	"""
+	
+	mass,spin = theta
+	r_nod_arr = np.zeros(len(freqs['nu1']))
+	r_guess = 10
+	for i in range(0,len(freqs['nu1'])):
+		try:
+			r_nod_arr[i] = newton_solver(r_guess,nu_nod,freqs['nu1'][i],mass,spin)
+		except RuntimeError:
+			r_nod_arr[i] = np.nan	
+	nu_per_model = nu_per(r_nod_arr,mass,spin)
+	nu_orb_model = nu_phi(r_nod_arr,mass,spin)
+	chi_2_per = np.sum(chi_sq(freqs['nu2'],nu_per_model,freqs['nu2_e']))
+	chi_2_orb = np.sum(chi_sq(freqs['nu3'],nu_orb_model,freqs['nu3_e']))
+	return chi_2_per+chi_2_orb
+	
+def ln_likelihood (theta,freqs,func):
+	"""
+	Calls the func (assumed to return a chi2 of some sort) and returns the log of the likelihood. 
+	
+	For chi2 statistic, the log likelihood is just the negative of the chi2. Since we minimise the chi2 and maximise likelihood (and log is monotonic)
+	"""
+	
+	ll = -func(theta,freqs)
+	return ll
+	
+
+def prior(theta, args, typ='uniform'):
+	
+	"""
+	
+	Prior information.
+	
+	In this analysis, variation is assumed over 2 parameters only. Mass and spin. Hence the priors will be determined for these two only. 
+	
+	typ: Uniform or gaussian. 
+	
+	For uniform prior, return -np.inf if the values are beyond the assumed interval. If value are in the interval return 0.0
+		The args in this case will be mass_min, mass_max, spin_min, spin_max
+	For Gaussian prior, return the summation of -(parameter - mean)**2/ (2*sigma**2)
+		The args in this case will be mass_mean, mass_sig, spin_mean, spin_sigma
+	
+	
+	Spin also assumes a hard limit of -0.998 to 0.998
+	For now both parameters will have a similar type of prior
+
+	"""
+	mass, spin = theta
+	
+	# hard limit on spin
+	if spin<-0.998 or spin > 0.998 :
+		return -np.inf
+	
+	if typ =='uniform':
+		mass_min, mass_max, spin_min, spin_max = args
+		if ((mass>= mass_min and mass<=mass_max) and (spin>=spin_min and spin<=spin_max)):
+				return 0.0
+	elif typ=='gaussian':
+		mass_mean, mass_sig, spin_mean, spin_sigma = args
+		mass_exp = - (mass-mass_mean)**2/(2*(mass_sigma)**2)
+		spin_exp = - (mass-mass_mean)**2/(2*(mass_sigma)**2)
+		return mass_exp+spin_exp
+	return -np.inf
+		
+
+def lnprob (theta, freqs, args, typ, func):
+	
+	"""
+	
+	This functions combines the prior and the likelihood to give a probability
+	Note that it is NOT Normalised by the model's probability.
+	"""
+	
+	ll = ln_likelihood(theta,freqs,func)
+	lp = prior(theta,args,typ=typ)
+	if not np.isfinite(lp): return -np.inf		# This is to see of the sampled point is beyond the prior
+	return lp + ll
