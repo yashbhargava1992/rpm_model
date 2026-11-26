@@ -57,7 +57,7 @@ sr_guess = 10
 #~ mass_spin_all = np.zeros((len(mass_guess),len(spin_guess)))
 #~ if parallelising:num_cores = mpg.cpu_count()
 
-out_dir = 'bayesian_test2_parallelise/'
+out_dir = 'bayesian_test9_full_spin_range_wider_mass_mixed/'
 os.system("mkdir -p {}".format(out_dir))
 os.system("cp rpm_model_solving.py my_function*py {}".format(out_dir))
 
@@ -68,24 +68,47 @@ os.system("cp rpm_model_solving.py my_function*py {}".format(out_dir))
 #~ print len(nu1_sel)
 
 ndim, nwalkers = 2,100
-iters = 1e3
+iters = 1500
 
-guess = [8,0]
+guess = [8,0.5]
 
 
 pos = [guess+ 1e-4 * np.random.randn(ndim) for i in range (nwalkers)]
 
 start_time = time.time()
 
-args_for_prior = [7.76,9.27, 0.4, 0.998]
+mass = 8.48
+m_min = 0.72
+m_plu = 0.79
+
+sig = 2
+
+# ~ args_for_prior = [mass-sig*m_min, mass+sig*m_plu, -0.998, 0.998]			# For uniform priors
+# ~ args_for_prior = [4,30, -0.998, 0.998]			# For uniform priors
+# ~ print (args_for_prior)
+# ~ args_for_prior = [7.76,9.27, -0.998, 0.998]			# For uniform priors
+args_for_prior = [8.48,0.7, -0.998, 0.998]			# For mixed priors
 
 with mpg.Pool() as pool:
-	sampler = mc.EnsembleSampler(nwalkers,ndim, mf.lnprob, args = (freqs, args_for_prior, 'uniform', mf.total_chisq), threads=4, pool=pool)
+	sampler = mc.EnsembleSampler(nwalkers,ndim, mf.lnprob, args = (freqs, args_for_prior, 'mixed', mf.total_chisq), threads=4, pool=pool)
 	sampler.run_mcmc(pos, iters)
 
 print ("EMCEE done. Time required:\t", time.time()-start_time)
 
-samples = sampler.chain[:,100:,:].reshape(-1,ndim)
+fig, axes = plt.subplots(2, figsize=(10,6), sharex=True)
+samples = sampler.get_chain()
+labels = ['Mass','Spin']
+for n in range(ndim):
+	ax = axes[n]
+	ax.plot(samples[:,:,n], 'k', alpha=0.3)
+	ax.set_xlim(0,len(samples))
+	ax.set_ylabel(labels[n])
+	ax.yaxis.set_label_coords(-0.1,0.5)
+axes[-1].set_xlabel("Step Number")
+
+plt.savefig(out_dir+'sample_evolution.png')
+plt.clf()
+samples = sampler.chain[:,200:,:].reshape(-1,ndim)
 
 np.save(out_dir+'samples_text.npy', samples)
 

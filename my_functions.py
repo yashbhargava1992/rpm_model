@@ -207,17 +207,17 @@ def prior(theta, args, typ='uniform'):
 	
 	In this analysis, variation is assumed over 2 parameters only. Mass and spin. Hence the priors will be determined for these two only. 
 	
-	typ: Uniform or gaussian. 
+	typ: Uniform or gaussian or mixed. 
 	
 	For uniform prior, return -np.inf if the values are beyond the assumed interval. If value are in the interval return 0.0
 		The args in this case will be mass_min, mass_max, spin_min, spin_max
 	For Gaussian prior, return the summation of -(parameter - mean)**2/ (2*sigma**2)
 		The args in this case will be mass_mean, mass_sig, spin_mean, spin_sigma
 	
+	In the case of mixed, Gaussian prior for the mass and uniform for spin are assumed
 	
 	Spin also assumes a hard limit of -0.998 to 0.998
-	For now both parameters will have a similar type of prior
-
+	
 	"""
 	mass, spin = theta
 	
@@ -230,10 +230,18 @@ def prior(theta, args, typ='uniform'):
 		if ((mass>= mass_min and mass<=mass_max) and (spin>=spin_min and spin<=spin_max)):
 				return 0.0
 	elif typ=='gaussian':
-		mass_mean, mass_sig, spin_mean, spin_sigma = args
+		mass_mean, mass_sigma, spin_mean, spin_sigma = args
 		mass_exp = - (mass-mass_mean)**2/(2*(mass_sigma)**2)
 		spin_exp = - (mass-mass_mean)**2/(2*(mass_sigma)**2)
 		return mass_exp+spin_exp
+		
+	elif typ=='mixed':
+		mass_mean, mass_sig, spin_min, spin_max = args
+		if (spin<spin_min or spin>spin_max): return -np.inf
+		else: 
+			mass_exp = - (mass-mass_mean)**2/(2*(mass_sig)**2)
+			return mass_exp
+		
 	return -np.inf
 		
 

@@ -5,3 +5,6 @@
 *.swp
 */
 *.zip
+.gitignore
+analysis.log
+*.npy
